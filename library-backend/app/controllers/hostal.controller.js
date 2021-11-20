@@ -1,4 +1,5 @@
 const db = require("../models");
+const { verifyJwtToken } = require("./users.controller");
 const Hostal = db.hostal;
 
 // Create and Save a new Tutorial

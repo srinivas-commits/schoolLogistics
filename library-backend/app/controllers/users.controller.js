@@ -165,25 +165,23 @@ exports.authorize = (req, res) => {
         });
 }
 
-function verifyJwtToken(token, access) {
-    return jwt.verify(token, TOKEN_SECRET, (err, user) => {
-        if (err) return false;
-        if (user.role === access) {
-            return true;
-        } else {
-            return false;
-        }
-    })
-}
-
-exports.verify = (req, res) => {
-    var user = verifyJwtToken(req.body.token);
-
-    console.log(user.username);
-    console.log(user.role);
-    if (user != null) {
-        res.status(200).json(user);
+exports.verifyJwtToken = function verifyJwtToken(req, access) {
+    const authHeader = req.headers.authorization;
+    if (authHeader) {
+        const token = authHeader.split(' ')[1];
+        return jwt.verify(token, TOKEN_SECRET, (err, user) => {
+            if (err) return res.sendStatus(401);
+            if (access != '') {
+                if (user.role === access) {
+                    return true;
+                } else {
+                    return false;
+                }
+            } else {
+                return true;
+            }
+        });
     } else {
-        res.status(401);
+        res.sendStatus(401);
     }
 }
