@@ -2,9 +2,11 @@ module.exports = mongoose => {
     var schema = mongoose.Schema({
         block: String,
         hostalNo: String,
-        StudentId: String,
+        studentId: String,
         roomCost: String,
         status: String,
+        fromDate: Date,
+        toDate: Date
     }, { timestamps: true });
 
     schema.method("toJSON", function() {

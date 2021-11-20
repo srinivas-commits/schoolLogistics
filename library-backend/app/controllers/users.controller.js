@@ -1,29 +1,25 @@
 const db = require("../models");
-const Hostal = db.hostal;
+const Users = db.users;
 
 // Create and Save a new Tutorial
 exports.create = (req, res) => {
     // Validate request
-    if (!req.body.block) {
+    if (!req.body.username) {
         console.log(req.body.block);
         res.status(400).send({ message: "Content cannot be empty! " });
         return;
     }
 
     // Create a Tutorial
-    const hostal = new Hostal({
-        block: req.body.block,
-        hostalNo: req.body.hostalNo,
-        studentId: req.body.studentId,
-        status: req.body.status,
-        roomCost: req.body.roomCost,
-        fromDate: req.body.fromDate,
-        toDate: req.body.toDate
+    const users = new Users({
+        username: req.body.username,
+        email: req.body.email,
+        useraccess: req.body.useraccess,
+        password: req.body.password,
     });
 
     // Save Tutorial in the database
-    hostal
-        .save(hostal)
+    users.save(users)
         .then(data => {
             res.send(data);
         })
@@ -36,10 +32,10 @@ exports.create = (req, res) => {
 
 // Retrieve all Tutorials from the database.
 exports.findAll = (req, res) => {
-    const block = req.query.block;
-    var condition = block ? { block: { $regex: new RegExp(block), $options: "i" } } : {};
-    debugger;
-    Hostal.find(condition)
+    const username = req.query.username;
+    var condition = username ? { username: { $regex: new RegExp(username), $options: "i" } } : {};
+
+    Users.find(condition)
         .then(data => {
             res.send(data);
         })
@@ -54,7 +50,7 @@ exports.findAll = (req, res) => {
 exports.findOne = (req, res) => {
     const id = req.params.id;
 
-    Hostal.findById(id)
+    Users.findById(id)
         .then(data => {
             if (!data)
                 res.status(404).send({ message: "Not found Tutorial with id " + id });
@@ -77,7 +73,7 @@ exports.update = (req, res) => {
 
     const id = req.params.id;
 
-    Hostal.findByIdAndUpdate(id, req.body, { useFindAndModify: false })
+    Users.findByIdAndUpdate(id, req.body, { useFindAndModify: false })
         .then(data => {
             if (!data) {
                 res.status(404).send({
@@ -96,7 +92,7 @@ exports.update = (req, res) => {
 exports.delete = (req, res) => {
     const id = req.params.id;
 
-    Hostal.findByIdAndRemove(id, { useFindAndModify: false })
+    Users.findByIdAndRemove(id, { useFindAndModify: false })
         .then(data => {
             if (!data) {
                 res.status(404).send({
@@ -117,7 +113,7 @@ exports.delete = (req, res) => {
 
 // Delete all Tutorials from the database.
 exports.deleteAll = (req, res) => {
-    Hostal.deleteMany({})
+    Users.deleteMany({})
         .then(data => {
             res.send({
                 message: `${data.deletedCount} Tutorials were deleted successfully!`
@@ -129,3 +125,65 @@ exports.deleteAll = (req, res) => {
             });
         });
 };
+
+const jwt = require('jsonwebtoken');
+const TOKEN_SECRET = '09f26e402586e2faa8da4c98a35f1b20d6b033c6097befa8be3486a829587fe2f90a832bd3ff9d42710a4da095a2ce285b009f0c3730cd9b8e1af3eb84df6611';
+
+function generateAccessToken(payload) {
+    return jwt.sign(payload, TOKEN_SECRET, { expiresIn: '1800s' });
+}
+
+exports.authorize = (req, res) => {
+
+    Users.findOne({ username: req.body.username })
+        .then(data => {
+            console.log(data);
+            console.log(data.password === req.body.password);
+            if (data.password === req.body.password) {
+                const token = generateAccessToken({ username: req.body.username, role: data.useraccess });
+                var result = {
+                    'token': token,
+                    'isauthorized': true
+                };
+                res.json(result);
+            } else {
+                var result = {
+                    'token': '',
+                    'isauthorized': false,
+                    'msg': 'incorrect password'
+                };
+                res.status(401).json(result);
+            }
+        })
+        .catch(err => {
+            var result = {
+                'token': '',
+                'isauthorized': false,
+                'msg': 'user not found'
+            };
+            res.status(401).json(result);
+        });
+}
+
+function verifyJwtToken(token, access) {
+    return jwt.verify(token, TOKEN_SECRET, (err, user) => {
+        if (err) return false;
+        if (user.role === access) {
+            return true;
+        } else {
+            return false;
+        }
+    })
+}
+
+exports.verify = (req, res) => {
+    var user = verifyJwtToken(req.body.token);
+
+    console.log(user.username);
+    console.log(user.role);
+    if (user != null) {
+        res.status(200).json(user);
+    } else {
+        res.status(401);
+    }
+}
