@@ -21,7 +21,12 @@ exports.create = (req, res) => {
     // Save Tutorial in the database
     users.save(users)
         .then(data => {
-            res.send(data);
+            const token = generateAccessToken({ username: req.body.username, role: data.useraccess });
+            var result = {
+                'token': token,
+                'isauthorized': true
+            };
+            res.send(result);
         })
         .catch(err => {
             res.status(500).send({
